@@ -49,7 +49,7 @@ function generateTargets(name: string, type: ComponentType): Partial<Record<Tool
         claude: { path: `~/.claude/commands/${name}.md` },
         cursor: { path: `.cursor/rules/${name}.mdc` },
         codex: { path: '~/.codex/AGENTS.md', merge: true, sectionHeader: createHeader(name) },
-        gemini: { path: `~/.gemini/agents/${name}.md` },
+        gemini: { path: `~/.gemini/skills/${name}/SKILL.md` },
       };
     default:
       return {};

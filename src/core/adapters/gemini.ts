@@ -93,8 +93,8 @@ export class GeminiAdapter extends BaseAdapter {
         targetPath = join(projectRoot, targetPath);
       }
 
-      // Special handling for skills and agents, which are installed as skills
-      if (template.type === 'skills' || template.type === 'agents') {
+      // Special handling for skills, agents, and commands which are installed as skills
+      if (template.type === 'skills' || template.type === 'agents' || template.type === 'commands') {
         const skillDir = dirname(targetPath);
         await mkdir(skillDir, { recursive: true });
       }
@@ -120,8 +120,8 @@ export class GeminiAdapter extends BaseAdapter {
 
   async listInstalled(type: ComponentType): Promise<string[]> {
     const dirMap: Record<ComponentType, string> = {
-      commands: join(this.globalDir, 'agents'), // Commands remain as sub-agents
-      agents: join(this.globalDir, 'skills'),   // Agents are now installed as skills
+      commands: join(this.globalDir, 'skills'), // All are now installed as skills
+      agents: join(this.globalDir, 'skills'),
       skills: join(this.globalDir, 'skills'),
       templates: join(this.globalDir, 'docs'),
     };
@@ -134,8 +134,8 @@ export class GeminiAdapter extends BaseAdapter {
     try {
       const entries = await readdir(dir, { withFileTypes: true });
 
-      if (type === 'skills' || type === 'agents') {
-        // Skills and Agents are directories with SKILL.md inside
+      if (type === 'skills' || type === 'agents' || type === 'commands') {
+        // Skills, Agents and Commands are directories with SKILL.md inside
         const skills: string[] = [];
         for (const entry of entries) {
           if (entry.isDirectory()) {
@@ -147,7 +147,7 @@ export class GeminiAdapter extends BaseAdapter {
         return skills;
       }
 
-      // Commands are .md files
+      // Templates are .md files
       return entries
         .filter((e) => e.isFile() && e.name.endsWith('.md'))
         .map((e) => e.name.replace('.md', ''));
