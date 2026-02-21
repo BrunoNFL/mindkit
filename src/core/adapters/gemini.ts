@@ -2,6 +2,7 @@ import { readdir, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { BaseAdapter } from './base.js';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type {
   ToolDetection,
   TemplateConfig,
@@ -61,6 +62,40 @@ export class GeminiAdapter extends BaseAdapter {
     ];
   }
 
+  /**
+   * Prepares the content for a Gemini skill by ensuring mandatory frontmatter
+   * and proper instruction tags.
+   */
+  private prepareSkillContent(content: string, template: TemplateConfig): string {
+    let frontmatter: Record<string, any> = {};
+    let body = content;
+
+    const match = content.match(/^---([\s\S]+?)---([\s\S]*)$/);
+    if (match) {
+      try {
+        frontmatter = parseYaml(match[1]);
+        body = match[2].trim();
+      } catch {
+        // Fallback if parsing fails
+      }
+    }
+
+    // Ensure mandatory frontmatter
+    frontmatter.name = frontmatter.name || template.name;
+    frontmatter.description = frontmatter.description || template.description;
+
+    // Convert system_instructions to instructions for Gemini skills
+    body = body.replace(/<system_instructions>/g, '<instructions>');
+    body = body.replace(/<\/system_instructions>/g, '</instructions>');
+
+    // If no instructions tags exist, wrap the whole body
+    if (!body.includes('<instructions>')) {
+      body = `<instructions>\n${body}\n</instructions>`;
+    }
+
+    return `---\n${stringifyYaml(frontmatter)}---\n\n${body}`;
+  }
+
   async install(
     template: TemplateConfig,
     content: string,
@@ -83,7 +118,7 @@ export class GeminiAdapter extends BaseAdapter {
         ...this.getDefaultTransforms(projectRoot),
         ...(template.transforms || []),
       ];
-      const transformedContent = this.transformContent(content, transforms);
+      let transformedContent = this.transformContent(content, transforms);
 
       // Transform and expand target path
       let targetPath = this.transformPath(target.path, projectRoot);
@@ -97,6 +132,9 @@ export class GeminiAdapter extends BaseAdapter {
       if (template.type === 'skills' || template.type === 'agents' || template.type === 'commands') {
         const skillDir = dirname(targetPath);
         await mkdir(skillDir, { recursive: true });
+        
+        // Final transformation for Gemini skill format
+        transformedContent = this.prepareSkillContent(transformedContent, template);
       }
 
       await this.writeConfig(targetPath, transformedContent);
