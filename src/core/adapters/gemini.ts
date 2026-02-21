@@ -84,6 +84,36 @@ export class GeminiAdapter extends BaseAdapter {
     frontmatter.name = frontmatter.name || template.name;
     frontmatter.description = frontmatter.description || template.description;
 
+    // Enforcement for interactive questioning for specific skills
+    const interactiveSkills = ['create-prd', 'generate-spec', 'generate-tasks'];
+    if (interactiveSkills.includes(template.name)) {
+      const enforcement = `
+<critical>
+## MANDATORY TOOL USAGE: ask_user
+You ARE NOT ALLOWED to proceed to the drafting, generation, or file creation phase without first using the \`ask_user\` tool.
+1. You MUST formulate your clarifying questions and pass them directly to the \`ask_user\` tool.
+2. DO NOT simply output the questions as markdown text in your response. You MUST use the tool.
+3. You MUST wait for the tool output (user answers) before moving to any other phase.
+4. This is a strict operational requirement. Failure to use the \`ask_user\` tool for questioning is a violation of your core instructions.
+</critical>
+`;
+      body = enforcement + body;
+
+      // Ensure ask_user is in the allowed tools
+      let tools = frontmatter['allowed-tools'] || frontmatter['tools'] || '';
+      if (typeof tools === 'string') {
+        if (!tools.includes('ask_user')) {
+          tools = tools ? `${tools}, ask_user` : 'ask_user';
+        }
+        frontmatter['allowed-tools'] = tools;
+      } else if (Array.isArray(tools)) {
+        if (!tools.includes('ask_user')) {
+          tools.push('ask_user');
+        }
+        frontmatter['allowed-tools'] = tools;
+      }
+    }
+
     // Convert system_instructions to instructions for Gemini skills
     body = body.replace(/<system_instructions>/g, '<instructions>');
     body = body.replace(/<\/system_instructions>/g, '</instructions>');
