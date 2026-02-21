@@ -1,5 +1,5 @@
-import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { BaseAdapter } from './base.js';
 import type {
@@ -11,28 +11,27 @@ import type {
 } from '../../types/index.js';
 
 /**
- * Adapter for Claude Code CLI
+ * Adapter for Gemini CLI
  *
  * Structure:
- * - ~/.claude/commands/*.md (Custom commands)
- * - ~/.claude/agents/*.md (Agent definitions)
- * - ~/.claude/skills/SKILL.md (Skill definitions)
- * - ~/.claude/docs/ (Documentation templates)
- * - CLAUDE.md (Project-level instructions)
+ * - ~/.gemini/agents/*.md (Agent definitions)
+ * - ~/.gemini/skills/<name>/SKILL.md (Skill definitions)
+ * - ~/.gemini/settings.json (Global settings)
+ * - .gemini/settings.json (Project-level settings)
  */
-export class ClaudeAdapter extends BaseAdapter {
-  readonly tool = 'claude' as const;
-  readonly name = 'Claude Code';
-  readonly description = 'Anthropic Claude Code CLI';
+export class GeminiAdapter extends BaseAdapter {
+  readonly tool = 'gemini' as const;
+  readonly name = 'Gemini CLI';
+  readonly description = 'Google Gemini CLI';
 
-  private readonly globalDir = join(homedir(), '.claude');
+  private readonly globalDir = join(homedir(), '.gemini');
 
   getGlobalConfigDir(): string {
     return this.globalDir;
   }
 
   getProjectConfigPath(projectRoot: string): string {
-    return join(projectRoot, 'CLAUDE.md');
+    return join(projectRoot, '.gemini/settings.json');
   }
 
   async detect(): Promise<ToolDetection> {
@@ -40,8 +39,8 @@ export class ClaudeAdapter extends BaseAdapter {
     const settingsPath = join(this.globalDir, 'settings.json');
     const settingsExist = await this.pathExists(settingsPath);
 
-    // Check if 'claude' command exists in PATH
-    const commandExists = this.commandExists('claude');
+    // Check if 'gemini' command exists in PATH
+    const commandExists = this.commandExists('gemini');
 
     // Tool is installed if command exists OR if config directory with settings exists
     const installed = commandExists || (configExists && settingsExist);
@@ -67,14 +66,14 @@ export class ClaudeAdapter extends BaseAdapter {
     content: string,
     projectRoot?: string
   ): Promise<InstallResult> {
-    const target = template.targets.claude;
+    const target = template.targets.gemini;
     if (!target) {
       return {
         template,
         tool: this.tool,
         success: false,
         targetPath: '',
-        error: 'No Claude target configured for this template',
+        error: 'No Gemini target configured for this template',
       };
     }
 
@@ -92,6 +91,12 @@ export class ClaudeAdapter extends BaseAdapter {
         targetPath = targetPath.replace('~', homedir());
       } else if (projectRoot && !targetPath.startsWith('/')) {
         targetPath = join(projectRoot, targetPath);
+      }
+
+      // Special handling for skills and agents, which are installed as skills
+      if (template.type === 'skills' || template.type === 'agents') {
+        const skillDir = dirname(targetPath);
+        await mkdir(skillDir, { recursive: true });
       }
 
       await this.writeConfig(targetPath, transformedContent);
@@ -115,8 +120,8 @@ export class ClaudeAdapter extends BaseAdapter {
 
   async listInstalled(type: ComponentType): Promise<string[]> {
     const dirMap: Record<ComponentType, string> = {
-      commands: join(this.globalDir, 'commands'),
-      agents: join(this.globalDir, 'agents'),
+      commands: join(this.globalDir, 'agents'), // Commands remain as sub-agents
+      agents: join(this.globalDir, 'skills'),   // Agents are now installed as skills
       skills: join(this.globalDir, 'skills'),
       templates: join(this.globalDir, 'docs'),
     };
@@ -129,14 +134,20 @@ export class ClaudeAdapter extends BaseAdapter {
     try {
       const entries = await readdir(dir, { withFileTypes: true });
 
-      if (type === 'skills') {
-        // Skills are directories with SKILL.md inside
-        return entries
-          .filter((e) => e.isDirectory())
-          .map((e) => e.name);
+      if (type === 'skills' || type === 'agents') {
+        // Skills and Agents are directories with SKILL.md inside
+        const skills: string[] = [];
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            if (await this.pathExists(join(dir, entry.name, 'SKILL.md'))) {
+              skills.push(entry.name);
+            }
+          }
+        }
+        return skills;
       }
 
-      // Commands and agents are .md files
+      // Commands are .md files
       return entries
         .filter((e) => e.isFile() && e.name.endsWith('.md'))
         .map((e) => e.name.replace('.md', ''));
