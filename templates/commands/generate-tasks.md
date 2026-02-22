@@ -41,17 +41,18 @@ The feature you will work on is identified by this slug:
 
 ### File Locations
 - Feature folder: `{{DOCS}}/tasks/prd-[feature-name]/`
+- Task list template: `{{DOCS}}/tasks-template.md`
 - Task list: `{{DOCS}}/tasks/prd-[feature-name]/tasks.md`
-- Individual task template: `{{DOCS}}/tasks/task-template.md`
+- Individual task template: `{{DOCS}}/task-template.md`
 - Individual tasks: `{{PROJECT}}/tasks/prd-[feature-name]/[num]_task.md`
 
 ### Task Summary Format (tasks.md)
 
-- **STRICTLY FOLLOW THE FORMAT OF INDIVIDUAL TASKS**
+- **STRICTLY FOLLOW THE TEMPLATE IN `{{DOCS}}/tasks-template.md`**
 
 ### Individual Task Format ([num]_task.md)
 
-- **STRICTLY FOLLOW THE TEMPLATE IN `{{DOCS}}/tasks/task-template.md`**
+- **STRICTLY FOLLOW THE TEMPLATE IN `{{DOCS}}/task-template.md`**
 
 ## Final Guidelines
 

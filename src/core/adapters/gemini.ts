@@ -87,6 +87,12 @@ export class GeminiAdapter extends BaseAdapter {
     // Enforcement for interactive questioning for specific skills
     const interactiveSkills = ['create-prd', 'generate-spec', 'generate-tasks'];
     if (interactiveSkills.includes(template.name)) {
+      // Specific path fixes for generate-tasks in Gemini
+      if (template.name === 'generate-tasks') {
+        body = body.replace(/\{\{DOCS\}\}\/tasks-template\.md/g, '{{DOCS}}/tasks/task-template.md');
+        body = body.replace(/\{\{DOCS\}\}\/task-template\.md/g, '{{DOCS}}/tasks/task-template.md');
+      }
+
       const enforcement = `
 <critical>
 ## MANDATORY TOOL USAGE: ask_user
