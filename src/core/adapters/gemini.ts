@@ -99,7 +99,7 @@ You ARE NOT ALLOWED to proceed to the drafting, generation, or file creation pha
 ## MANDATORY TEMPLATE ACCESS PROTOCOL
 You may encounter issues reading templates directly from the global documentation directory ({{DOCS}}).
 1. You MUST use \`run_shell_command\` to copy the required template from \`{{DOCS}}\` to a temporary location in the current project's \`.gemini/\` directory (create it if it doesn't exist).
-2. Example: \`mkdir -p .gemini && cp {{DOCS}}/specs/prd-template.md .gemini/prd-template.md\`
+2. Example: \`mkdir -p .gemini && cp {{DOCS}}/path/to/template.md .gemini/template.md\`
 3. Once copied, read the template from the local project path.
 4. This ensures you have access to the standardized templates regardless of environment restrictions.
 </critical>
