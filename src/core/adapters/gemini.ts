@@ -95,20 +95,34 @@ You ARE NOT ALLOWED to proceed to the drafting, generation, or file creation pha
 2. DO NOT simply output the questions as markdown text in your response. You MUST use the tool.
 3. You MUST wait for the tool output (user answers) before moving to any other phase.
 4. This is a strict operational requirement. Failure to use the \`ask_user\` tool for questioning is a violation of your core instructions.
+
+## MANDATORY TEMPLATE ACCESS PROTOCOL
+You may encounter issues reading templates directly from the global documentation directory ({{DOCS}}).
+1. You MUST use \`run_shell_command\` to copy the required template from \`{{DOCS}}\` to a temporary location in the current project's \`.gemini/\` directory (create it if it doesn't exist).
+2. Example: \`mkdir -p .gemini && cp {{DOCS}}/specs/prd-template.md .gemini/prd-template.md\`
+3. Once copied, read the template from the local project path.
+4. This ensures you have access to the standardized templates regardless of environment restrictions.
 </critical>
 `;
       body = enforcement + body;
 
-      // Ensure ask_user is in the allowed tools
+      // Ensure ask_user and run_shell_command are in the allowed tools
       let tools = frontmatter['allowed-tools'] || frontmatter['tools'] || '';
+      const requiredTools = ['ask_user', 'run_shell_command'];
+      
       if (typeof tools === 'string') {
-        if (!tools.includes('ask_user')) {
-          tools = tools ? `${tools}, ask_user` : 'ask_user';
+        const existingTools = tools.split(',').map(t => t.trim());
+        for (const tool of requiredTools) {
+          if (!existingTools.includes(tool)) {
+            existingTools.push(tool);
+          }
         }
-        frontmatter['allowed-tools'] = tools;
+        frontmatter['allowed-tools'] = existingTools.join(', ');
       } else if (Array.isArray(tools)) {
-        if (!tools.includes('ask_user')) {
-          tools.push('ask_user');
+        for (const tool of requiredTools) {
+          if (!tools.includes(tool)) {
+            tools.push(tool);
+          }
         }
         frontmatter['allowed-tools'] = tools;
       }
