@@ -163,12 +163,20 @@ You may encounter issues reading templates directly from the global documentatio
     }
 
     try {
-      // Apply transforms to content
+      let transformedContent = content;
+
+      // Special handling for skills, agents, and commands which are installed as skills
+      if (template.type === 'skills' || template.type === 'agents' || template.type === 'commands') {
+        // Final transformation for Gemini skill format (must happen before path transform)
+        transformedContent = this.prepareSkillContent(transformedContent, template);
+      }
+
+      // Apply transforms to content (placeholders like {{DOCS}}, {{PROJECT}}, etc.)
       const transforms = [
         ...this.getDefaultTransforms(projectRoot),
         ...(template.transforms || []),
       ];
-      let transformedContent = this.transformContent(content, transforms);
+      transformedContent = this.transformContent(transformedContent, transforms);
 
       // Transform and expand target path
       let targetPath = this.transformPath(target.path, projectRoot);
@@ -178,13 +186,10 @@ You may encounter issues reading templates directly from the global documentatio
         targetPath = join(projectRoot, targetPath);
       }
 
-      // Special handling for skills, agents, and commands which are installed as skills
+      // Ensure directory exists for skills
       if (template.type === 'skills' || template.type === 'agents' || template.type === 'commands') {
         const skillDir = dirname(targetPath);
         await mkdir(skillDir, { recursive: true });
-        
-        // Final transformation for Gemini skill format
-        transformedContent = this.prepareSkillContent(transformedContent, template);
       }
 
       await this.writeConfig(targetPath, transformedContent);
